@@ -1,0 +1,725 @@
+{
+  "project": {
+    "name": "FinanceOS",
+    "type": "SaaS de finanças pessoais com IA",
+    "language": "pt-BR",
+    "summary": "Aplicação web para controle financeiro pessoal, metas, patrimônio, projeção de aposentadoria e insights financeiros com IA.",
+    "workspaceRoot": "financeos",
+    "sourceOfTruth": "código-fonte atual"
+  },
+  "inventory": {
+    "pages": 16,
+    "apiRoutes": 6,
+    "trpcRouters": 7,
+    "services": 6,
+    "components": 66,
+    "unitTests": 5,
+    "e2eTests": 2
+  },
+  "stack": {
+    "frontend": [
+      "Next.js 16 App Router",
+      "React 19",
+      "Tailwind CSS 4",
+      "shadcn/ui",
+      "Recharts",
+      "TanStack Query",
+      "Zustand"
+    ],
+    "backend": [
+      "tRPC",
+      "Prisma",
+      "PostgreSQL",
+      "Supabase Auth"
+    ],
+    "integrations": [
+      "OpenAI",
+      "Vercel AI SDK",
+      "Stripe",
+      "Resend",
+      "Upstash Redis",
+      "Vercel Analytics",
+      "Vercel Speed Insights"
+    ]
+  },
+  "directories": [
+    {
+      "path": "src/app",
+      "role": "Rotas App Router, layouts e endpoints HTTP"
+    },
+    {
+      "path": "src/components",
+      "role": "Interface e componentes por domínio"
+    },
+    {
+      "path": "src/server",
+      "role": "Routers tRPC, serviços e lógica de backend"
+    },
+    {
+      "path": "src/lib",
+      "role": "Clientes, utilitários, segurança e fórmulas"
+    },
+    {
+      "path": "prisma/schema.prisma",
+      "role": "Modelo relacional principal"
+    }
+  ],
+  "environment": [
+    {
+      "name": "NEXT_PUBLIC_SUPABASE_URL",
+      "required": true,
+      "usedBy": ["middleware", "Supabase client/server", "auth pages"]
+    },
+    {
+      "name": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "required": true,
+      "usedBy": ["middleware", "Supabase client/server", "auth pages"]
+    },
+    {
+      "name": "SUPABASE_SERVICE_ROLE_KEY",
+      "required": true,
+      "usedBy": ["env.ts validation"]
+    },
+    {
+      "name": "DATABASE_URL",
+      "required": true,
+      "usedBy": ["Prisma", "PostgreSQL adapter"]
+    },
+    {
+      "name": "OPENAI_API_KEY",
+      "required": true,
+      "usedBy": ["AI insights", "AI chat"]
+    },
+    {
+      "name": "STRIPE_SECRET_KEY",
+      "required": true,
+      "usedBy": ["Stripe service", "webhook"]
+    },
+    {
+      "name": "STRIPE_WEBHOOK_SECRET",
+      "required": true,
+      "usedBy": ["Stripe webhook"]
+    },
+    {
+      "name": "STRIPE_MONTHLY_PRICE_ID",
+      "required": false,
+      "usedBy": ["subscription status", "checkout", "webhook mapping"]
+    },
+    {
+      "name": "STRIPE_YEARLY_PRICE_ID",
+      "required": false,
+      "usedBy": ["subscription status", "checkout", "webhook mapping"]
+    },
+    {
+      "name": "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+      "required": false,
+      "usedBy": ["template/example only"]
+    },
+    {
+      "name": "RESEND_API_KEY",
+      "required": true,
+      "usedBy": ["transactional emails"]
+    },
+    {
+      "name": "UPSTASH_REDIS_REST_URL",
+      "required": false,
+      "usedBy": ["cache", "rate limit"]
+    },
+    {
+      "name": "UPSTASH_REDIS_REST_TOKEN",
+      "required": false,
+      "usedBy": ["cache", "rate limit"]
+    },
+    {
+      "name": "CRON_SECRET",
+      "required": true,
+      "usedBy": ["cron security"]
+    },
+    {
+      "name": "NEXT_PUBLIC_APP_URL",
+      "required": false,
+      "usedBy": ["checkout redirects", "portal redirects", "TRPC provider SSR base URL"]
+    }
+  ],
+  "dataModel": {
+    "enums": [
+      {
+        "name": "TransactionType",
+        "values": ["INCOME", "EXPENSE"]
+      },
+      {
+        "name": "RecurrenceType",
+        "values": ["NONE", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"]
+      },
+      {
+        "name": "AssetType",
+        "values": ["FINANCIAL", "PHYSICAL", "BUSINESS"]
+      },
+      {
+        "name": "GoalType",
+        "values": ["TRAVEL", "CAR", "HOUSE", "RETIREMENT", "EDUCATION", "EMERGENCY", "BUSINESS", "OTHER"]
+      },
+      {
+        "name": "IncomeType",
+        "values": ["SALARY", "FREELANCE", "BUSINESS", "INVESTMENT", "OTHER"]
+      },
+      {
+        "name": "IncomeStability",
+        "values": ["STABLE", "VARIABLE", "MIXED"]
+      },
+      {
+        "name": "FinancialGoalType",
+        "values": ["GROW_WEALTH", "GET_OUT_OF_DEBT", "FINANCIAL_INDEPENDENCE", "RETIREMENT", "OTHER"]
+      },
+      {
+        "name": "SubscriptionPlan",
+        "values": ["FREE", "MONTHLY", "YEARLY"]
+      },
+      {
+        "name": "SubscriptionStatus",
+        "values": ["TRIALING", "ACTIVE", "CANCELED", "PAST_DUE", "PAUSED"]
+      },
+      {
+        "name": "InsightModule",
+        "values": ["DASHBOARD", "FINANCES", "GOALS", "FUTURE", "PATRIMONY"]
+      },
+      {
+        "name": "InsightType",
+        "values": ["ALERT", "RECOMMENDATION", "INFO", "WARNING"]
+      }
+    ],
+    "models": [
+      {
+        "name": "User",
+        "table": "users",
+        "purpose": "Identidade principal do usuário sincronizada com Supabase Auth",
+        "keyFields": ["id", "email", "name", "avatarUrl", "onboardingComplete"],
+        "relations": ["profile", "transactions", "categories", "goals", "assets", "subscription", "aiInsights"]
+      },
+      {
+        "name": "UserProfile",
+        "table": "user_profiles",
+        "purpose": "Perfil financeiro e parâmetros de projeção",
+        "keyFields": ["userId", "monthlyIncome", "incomeType", "financialGoal", "retirementAge", "desiredMonthlyIncome", "monthlyInvestment", "interestRate", "inflationRate", "currency"],
+        "relations": ["user"]
+      },
+      {
+        "name": "Category",
+        "table": "categories",
+        "purpose": "Categorias de receitas e despesas, padrão ou personalizadas",
+        "keyFields": ["userId", "name", "type", "isDefault", "isActive"],
+        "relations": ["user", "transactions"]
+      },
+      {
+        "name": "Transaction",
+        "table": "transactions",
+        "purpose": "Livro caixa de receitas e despesas com suporte a recorrência",
+        "keyFields": ["userId", "categoryId", "amount", "type", "transactionDate", "isRecurring", "recurrenceType", "parentId"],
+        "relations": ["user", "category", "parent", "children"]
+      },
+      {
+        "name": "Goal",
+        "table": "goals",
+        "purpose": "Metas financeiras do usuário com viabilidade e esforço mensal",
+        "keyFields": ["userId", "name", "type", "targetAmount", "currentAmount", "deadline", "priority", "isActive", "affectsPlanning", "monthlyNeeded", "isViable"],
+        "relations": ["user", "contributions"]
+      },
+      {
+        "name": "GoalContribution",
+        "table": "goal_contributions",
+        "purpose": "Histórico de aportes feitos para metas",
+        "keyFields": ["goalId", "userId", "amount", "date"],
+        "relations": ["goal"]
+      },
+      {
+        "name": "Asset",
+        "table": "assets",
+        "purpose": "Patrimônio do usuário: ativos financeiros, bens físicos e negócios",
+        "keyFields": ["userId", "name", "type", "category", "currentValue", "purchaseValue", "purchaseDate", "isActive", "ticker", "broker"],
+        "relations": ["user"]
+      },
+      {
+        "name": "Subscription",
+        "table": "subscriptions",
+        "purpose": "Estado do plano, trial e vínculo com Stripe",
+        "keyFields": ["userId", "stripeCustomerId", "stripeSubscriptionId", "stripePriceId", "plan", "status", "trialEndsAt", "currentPeriodStart", "currentPeriodEnd", "cancelAtPeriodEnd"],
+        "relations": ["user"]
+      },
+      {
+        "name": "AiInsight",
+        "table": "ai_insights",
+        "purpose": "Insights financeiros persistidos e exibidos por módulo",
+        "keyFields": ["userId", "module", "type", "title", "content", "isRead", "isDismissed", "metadata"],
+        "relations": ["user"]
+      },
+      {
+        "name": "AuthAuditLog",
+        "table": "auth_audit_logs",
+        "purpose": "Trilha de auditoria de eventos de autenticação",
+        "keyFields": ["userId", "event", "ipAddress", "userAgent", "metadata"],
+        "relations": []
+      }
+    ]
+  },
+  "routes": {
+    "pages": [
+      {
+        "path": "/",
+        "group": "public",
+        "file": "src/app/page.tsx",
+        "purpose": "Template padrão do Next.js ainda não adaptado ao produto"
+      },
+      {
+        "path": "/login",
+        "group": "auth",
+        "file": "src/app/(auth)/login/page.tsx",
+        "purpose": "Login com senha e Google OAuth"
+      },
+      {
+        "path": "/cadastro",
+        "group": "auth",
+        "file": "src/app/(auth)/cadastro/page.tsx",
+        "purpose": "Cadastro com validação forte de senha"
+      },
+      {
+        "path": "/recuperar-senha",
+        "group": "auth",
+        "file": "src/app/(auth)/recuperar-senha/page.tsx",
+        "purpose": "Pedido de redefinição de senha"
+      },
+      {
+        "path": "/mfa",
+        "group": "auth",
+        "file": "src/app/(auth)/mfa/page.tsx",
+        "purpose": "Verificação TOTP"
+      },
+      {
+        "path": "/onboarding",
+        "group": "onboarding",
+        "file": "src/app/(onboarding)/onboarding/page.tsx",
+        "purpose": "Fluxo guiado de configuração inicial"
+      },
+      {
+        "path": "/dashboard",
+        "group": "app",
+        "file": "src/app/(app)/dashboard/page.tsx",
+        "purpose": "Visão consolidada das finanças"
+      },
+      {
+        "path": "/financas",
+        "group": "app",
+        "file": "src/app/(app)/financas/page.tsx",
+        "purpose": "Transações, filtros e análise mensal"
+      },
+      {
+        "path": "/metas",
+        "group": "app",
+        "file": "src/app/(app)/metas/page.tsx",
+        "purpose": "CRUD de metas e aportes"
+      },
+      {
+        "path": "/patrimonio",
+        "group": "app",
+        "file": "src/app/(app)/patrimonio/page.tsx",
+        "purpose": "Ativos e consolidação patrimonial"
+      },
+      {
+        "path": "/meu-futuro",
+        "group": "app",
+        "file": "src/app/(app)/meu-futuro/page.tsx",
+        "purpose": "Simulação de aposentadoria e liberdade financeira"
+      },
+      {
+        "path": "/dash-ia",
+        "group": "app",
+        "file": "src/app/(app)/dash-ia/page.tsx",
+        "purpose": "Insights por módulo e chat financeiro"
+      },
+      {
+        "path": "/perfil",
+        "group": "app",
+        "file": "src/app/(app)/perfil/page.tsx",
+        "purpose": "Dados pessoais, financeiros e segurança"
+      },
+      {
+        "path": "/configuracoes",
+        "group": "app",
+        "file": "src/app/(app)/configuracoes/page.tsx",
+        "purpose": "Parâmetros financeiros, notificações e sistema"
+      },
+      {
+        "path": "/upgrade",
+        "group": "app",
+        "file": "src/app/(app)/upgrade/page.tsx",
+        "purpose": "Upgrade de assinatura via Stripe"
+      }
+    ],
+    "api": [
+      {
+        "path": "/api/auth/callback",
+        "method": "GET",
+        "file": "src/app/api/auth/callback/route.ts",
+        "purpose": "Troca código OAuth por sessão, faz upsert do usuário e cria trial"
+      },
+      {
+        "path": "/api/ai/insights",
+        "method": "POST",
+        "file": "src/app/api/ai/insights/route.ts",
+        "purpose": "Chat streaming com contexto financeiro do usuário"
+      },
+      {
+        "path": "/api/cron/recorrencias",
+        "method": "GET",
+        "file": "src/app/api/cron/recorrencias/route.ts",
+        "purpose": "Gera lançamentos recorrentes futuros"
+      },
+      {
+        "path": "/api/cron/trial-expiring",
+        "method": "GET",
+        "file": "src/app/api/cron/trial-expiring/route.ts",
+        "purpose": "Envia e-mails de trial expirando em ~3 dias"
+      },
+      {
+        "path": "/api/stripe/webhook",
+        "method": "POST",
+        "file": "src/app/api/stripe/webhook/route.ts",
+        "purpose": "Sincroniza assinatura após eventos Stripe"
+      },
+      {
+        "path": "/api/trpc/[trpc]",
+        "method": "GET|POST",
+        "file": "src/app/api/trpc/[trpc]/route.ts",
+        "purpose": "Entrada de backend para todos os routers tRPC"
+      }
+    ],
+    "navigation": [
+      { "name": "Home", "href": "/dashboard", "disabled": false },
+      { "name": "Lançamentos", "href": "/financas", "disabled": false },
+      { "name": "Meu Futuro", "href": "/meu-futuro", "disabled": false },
+      { "name": "Patrimônio", "href": "/patrimonio", "disabled": false },
+      { "name": "Investimentos", "href": "/investimentos", "disabled": true },
+      { "name": "Proteção", "href": "/protecao", "disabled": true },
+      { "name": "Contas", "href": "/contas", "disabled": true },
+      { "name": "Dash.IA", "href": "/dash-ia", "disabled": false },
+      { "name": "Perfil", "href": "/perfil", "disabled": false },
+      { "name": "Configurações", "href": "/configuracoes", "disabled": false }
+    ]
+  },
+  "trpc": [
+    {
+      "router": "user",
+      "file": "src/server/routers/user.ts",
+      "responsibility": "Perfil, onboarding, dashboard e projeção financeira",
+      "procedures": [
+        { "name": "healthCheck", "type": "query", "auth": "public" },
+        { "name": "getProfile", "type": "query", "auth": "protected" },
+        { "name": "updateProfile", "type": "mutation", "auth": "protected" },
+        { "name": "completeOnboarding", "type": "mutation", "auth": "protected" },
+        { "name": "getOnboardingStatus", "type": "query", "auth": "protected" },
+        { "name": "getProjectionData", "type": "query", "auth": "protected" },
+        { "name": "getDashboardData", "type": "query", "auth": "protected" }
+      ]
+    },
+    {
+      "router": "transaction",
+      "file": "src/server/routers/transaction.ts",
+      "responsibility": "Livro caixa, recorrência e analytics de transações",
+      "procedures": [
+        { "name": "list", "type": "query", "auth": "protected" },
+        { "name": "create", "type": "mutation", "auth": "protected" },
+        { "name": "update", "type": "mutation", "auth": "protected" },
+        { "name": "delete", "type": "mutation", "auth": "protected" },
+        { "name": "getMonthlySummary", "type": "query", "auth": "protected" },
+        { "name": "getBiggestExpenses", "type": "query", "auth": "protected" },
+        { "name": "getMonthlyComparison", "type": "query", "auth": "protected" }
+      ]
+    },
+    {
+      "router": "goal",
+      "file": "src/server/routers/goal.ts",
+      "responsibility": "Metas, cálculo de esforço mensal e aportes",
+      "procedures": [
+        { "name": "list", "type": "query", "auth": "protected" },
+        { "name": "create", "type": "mutation", "auth": "protected" },
+        { "name": "update", "type": "mutation", "auth": "protected" },
+        { "name": "delete", "type": "mutation", "auth": "protected" },
+        { "name": "addContribution", "type": "mutation", "auth": "protected" },
+        { "name": "getTopGoals", "type": "query", "auth": "protected" }
+      ]
+    },
+    {
+      "router": "asset",
+      "file": "src/server/routers/asset.ts",
+      "responsibility": "Patrimônio, agrupamento e consolidação de ativos",
+      "procedures": [
+        { "name": "list", "type": "query", "auth": "protected" },
+        { "name": "create", "type": "mutation", "auth": "protected" },
+        { "name": "update", "type": "mutation", "auth": "protected" },
+        { "name": "delete", "type": "mutation", "auth": "protected" },
+        { "name": "getSummary", "type": "query", "auth": "protected" }
+      ]
+    },
+    {
+      "router": "category",
+      "file": "src/server/routers/category.ts",
+      "responsibility": "Categorias padrão e personalizadas de receitas/despesas",
+      "procedures": [
+        { "name": "list", "type": "query", "auth": "protected" },
+        { "name": "create", "type": "mutation", "auth": "protected" },
+        { "name": "update", "type": "mutation", "auth": "protected" },
+        { "name": "delete", "type": "mutation", "auth": "protected" }
+      ]
+    },
+    {
+      "router": "subscription",
+      "file": "src/server/routers/subscription.ts",
+      "responsibility": "Status de assinatura e integração com checkout/portal Stripe",
+      "procedures": [
+        { "name": "getStatus", "type": "query", "auth": "protected" },
+        { "name": "createCheckout", "type": "mutation", "auth": "protected" },
+        { "name": "createPortal", "type": "mutation", "auth": "protected" }
+      ]
+    },
+    {
+      "router": "ai",
+      "file": "src/server/routers/ai.ts",
+      "responsibility": "Consulta, geração e estado dos insights de IA",
+      "procedures": [
+        { "name": "getInsights", "type": "query", "auth": "protected" },
+        { "name": "generateInsights", "type": "mutation", "auth": "protected" },
+        { "name": "markAsRead", "type": "mutation", "auth": "protected" },
+        { "name": "dismiss", "type": "mutation", "auth": "protected" },
+        { "name": "getUnreadCount", "type": "query", "auth": "protected" }
+      ]
+    }
+  ],
+  "services": [
+    {
+      "name": "financial-calculator",
+      "file": "src/server/services/financial-calculator.ts",
+      "purpose": "Gera projeção patrimonial consolidada usando perfil, transações, ativos e metas",
+      "dependsOn": ["Prisma", "financial.ts"]
+    },
+    {
+      "name": "ai-insights",
+      "file": "src/server/services/ai-insights.ts",
+      "purpose": "Monta contexto financeiro, chama OpenAI, persiste insights e controla cache/rate limit",
+      "dependsOn": ["OpenAI", "Prisma", "Upstash Redis"]
+    },
+    {
+      "name": "recurrence.service",
+      "file": "src/server/services/recurrence.service.ts",
+      "purpose": "Gera ocorrências futuras faltantes de transações recorrentes",
+      "dependsOn": ["Prisma", "date-fns"]
+    },
+    {
+      "name": "stripe",
+      "file": "src/server/services/stripe.ts",
+      "purpose": "Cria cliente Stripe, customer, checkout session e billing portal",
+      "dependsOn": ["Stripe", "Prisma"]
+    },
+    {
+      "name": "email",
+      "file": "src/server/services/email.ts",
+      "purpose": "Envia e-mails transacionais de onboarding, trial, cobrança e cancelamento",
+      "dependsOn": ["Resend", "React Email"]
+    },
+    {
+      "name": "audit",
+      "file": "src/server/services/audit.ts",
+      "purpose": "Persiste trilha de auditoria de autenticação",
+      "dependsOn": ["Prisma"]
+    }
+  ],
+  "frontendModules": [
+    {
+      "name": "Dashboard",
+      "route": "/dashboard",
+      "components": ["DashboardClient", "AlertasIAWidget", "PatrimonioWidget", "LiberdadeFinanceiraWidget", "ResumoMensalWidget", "MetasTopWidget"],
+      "dataSources": ["trpc.user.getDashboardData", "trpc.ai.generateInsights", "trpc.ai.getInsights"],
+      "capabilities": ["resumo financeiro", "patrimônio", "top metas", "alertas IA"]
+    },
+    {
+      "name": "Finanças",
+      "route": "/financas",
+      "components": ["FinancasClient", "TransactionList", "TransactionForm", "CategoryManager"],
+      "dataSources": ["trpc.transaction.list", "trpc.transaction.getMonthlySummary", "trpc.transaction.getBiggestExpenses", "trpc.transaction.getMonthlyComparison", "trpc.category.list"],
+      "capabilities": ["CRUD de transações", "recorrência", "filtros", "gráficos"]
+    },
+    {
+      "name": "Metas",
+      "route": "/metas",
+      "components": ["MetasClient", "GoalForm", "GoalContributionForm", "GoalCard"],
+      "dataSources": ["trpc.goal.list", "trpc.goal.create", "trpc.goal.update", "trpc.goal.delete", "trpc.goal.addContribution"],
+      "capabilities": ["CRUD de metas", "aportes", "cálculo de viabilidade"]
+    },
+    {
+      "name": "Patrimônio",
+      "route": "/patrimonio",
+      "components": ["PatrimonioClient", "AssetForm", "AssetList", "PatrimonioChart"],
+      "dataSources": ["trpc.asset.list", "trpc.asset.getSummary", "trpc.asset.delete"],
+      "capabilities": ["ativos por tipo", "KPIs patrimoniais", "gráfico por categoria"]
+    },
+    {
+      "name": "Meu Futuro",
+      "route": "/meu-futuro",
+      "components": ["MeuFuturoClient", "IndependenciaSliders", "ProjecaoChart"],
+      "dataSources": ["trpc.user.getProjectionData", "trpc.user.getProfile", "trpc.user.updateProfile"],
+      "capabilities": ["simulação de aposentadoria", "projeção patrimonial", "persistência de parâmetros"]
+    },
+    {
+      "name": "Dash.IA",
+      "route": "/dash-ia",
+      "components": ["DashIAClient", "InsightCard", "AIChat"],
+      "dataSources": ["trpc.ai.getInsights", "trpc.ai.generateInsights", "trpc.ai.markAsRead", "trpc.ai.dismiss", "POST /api/ai/insights"],
+      "capabilities": ["insights persistidos", "filtro por módulo", "chat com streaming"]
+    },
+    {
+      "name": "Perfil",
+      "route": "/perfil",
+      "components": ["ProfileForm"],
+      "dataSources": ["useUser", "trpc.user.updateProfile", "Supabase auth.updateUser"],
+      "capabilities": ["dados pessoais", "dados financeiros", "objetivo principal", "troca de senha"]
+    },
+    {
+      "name": "Configurações",
+      "route": "/configuracoes",
+      "components": ["SettingsPage"],
+      "dataSources": ["useUser", "trpc.user.updateProfile"],
+      "capabilities": ["taxas financeiras", "notificações", "moeda", "área visual de billing"]
+    },
+    {
+      "name": "Upgrade",
+      "route": "/upgrade",
+      "components": ["UpgradePage"],
+      "dataSources": ["trpc.subscription.getStatus", "trpc.subscription.createCheckout"],
+      "capabilities": ["checkout mensal", "checkout anual"]
+    },
+    {
+      "name": "Onboarding",
+      "route": "/onboarding",
+      "components": ["OnboardingShell", "Step1Accounts", "Step2Finances", "Step3Goals", "Step4Retirement"],
+      "dataSources": ["trpc.user.getOnboardingStatus", "trpc.user.updateProfile", "trpc.user.completeOnboarding", "trpc.asset.create", "trpc.goal.create"],
+      "capabilities": ["configuração inicial guiada", "seed de categorias padrão", "inicialização de dados"]
+    }
+  ],
+  "businessFlows": [
+    {
+      "name": "Autenticação e ativação de conta",
+      "steps": [
+        "Usuário faz login/cadastro por senha ou Google",
+        "Middleware valida sessão Supabase",
+        "Callback OAuth troca código por sessão",
+        "Sistema faz upsert do usuário na tabela users",
+        "Sistema cria assinatura trial de 14 dias",
+        "Sistema dispara e-mail de boas-vindas"
+      ]
+    },
+    {
+      "name": "Onboarding inicial",
+      "steps": [
+        "Usuário informa renda e estabilidade",
+        "Sistema salva UserProfile e cria categorias padrão",
+        "Usuário informa patrimônio inicial",
+        "Sistema cria ativos iniciais",
+        "Usuário registra metas",
+        "Usuário informa parâmetros de aposentadoria",
+        "Sistema marca onboardingComplete quando todas as condições são atendidas"
+      ]
+    },
+    {
+      "name": "Gestão de transações recorrentes",
+      "steps": [
+        "Usuário cria transação com recorrência",
+        "Sistema cria transação pai e gera filhos iniciais",
+        "Cron de recorrência gera ocorrências futuras faltantes",
+        "Edição/exclusão pode atuar sobre item único, futuros ou toda a série"
+      ]
+    },
+    {
+      "name": "Geração de insights de IA",
+      "steps": [
+        "Sistema monta contexto financeiro do usuário",
+        "Aplica rate limit diário via Redis",
+        "Consulta cache diário de insights",
+        "Chama OpenAI quando necessário",
+        "Valida estrutura JSON dos insights",
+        "Persiste insights em AiInsight",
+        "Front lista, marca como lido e descarta insights"
+      ]
+    },
+    {
+      "name": "Assinatura premium",
+      "steps": [
+        "Front consulta status de assinatura",
+        "Usuário escolhe plano no upgrade",
+        "Backend cria checkout session Stripe",
+        "Webhook sincroniza customer/subscription/price/status",
+        "Sistema envia e-mails de pagamento e cancelamento",
+        "Cron avisa trial prestes a expirar"
+      ]
+    }
+  ],
+  "testing": {
+    "unitAndLogic": [
+      "src/lib/__tests__/financial.test.ts",
+      "src/lib/__tests__/formatters.test.ts",
+      "src/server/services/__tests__/financial-calculator.test.ts",
+      "src/server/routers/__tests__/asset.test.ts",
+      "src/server/routers/__tests__/goal.test.ts"
+    ],
+    "e2e": [
+      "tests/e2e/auth.spec.ts",
+      "tests/e2e/transaction.spec.ts"
+    ],
+    "coverageNotes": [
+      "Há testes para fórmulas financeiras e parte da lógica de metas/ativos.",
+      "Não foram encontrados testes robustos para subscription, IA, categoria, middleware ou webhook.",
+      "Os testes E2E cobrem login, cadastro, rota protegida e criação básica de transação."
+    ]
+  },
+  "gaps": [
+    {
+      "area": "Landing/public root",
+      "finding": "A rota / ainda usa o template padrão do Next.js, sem identidade do produto.",
+      "impact": "Experiência pública inconsistente e onboarding comercial inexistente na home.",
+      "evidence": ["src/app/page.tsx"]
+    },
+    {
+      "area": "Onboarding gate",
+      "finding": "O bloqueio de usuários sem onboarding concluído está comentado no layout da área logada.",
+      "impact": "Usuários podem acessar módulos sem setup mínimo completo.",
+      "evidence": ["src/app/(app)/layout.tsx"]
+    },
+    {
+      "area": "Projection simulation",
+      "finding": "O toggle de incluir metas no módulo Meu Futuro não altera os dados recalculados localmente.",
+      "impact": "A UI sugere uma simulação que o cálculo atual não executa.",
+      "evidence": ["src/components/futuro/MeuFuturoClient.tsx"]
+    },
+    {
+      "area": "Billing UX",
+      "finding": "A tela de configurações mostra ações de faturamento simuladas com toast, sem integração real.",
+      "impact": "Inconsistência entre a área de configurações e o módulo real de upgrade.",
+      "evidence": ["src/app/(app)/configuracoes/page.tsx"]
+    },
+    {
+      "area": "Navigation/header personalization",
+      "finding": "Header e sidebar usam nome, e-mail, avatar e trial placeholder em vez de dados reais.",
+      "impact": "Informação visual incorreta para o usuário autenticado.",
+      "evidence": ["src/components/layout/Header.tsx", "src/components/layout/Sidebar.tsx"]
+    },
+    {
+      "area": "Debt modeling",
+      "finding": "O onboarding coleta dívidas, mas não existe modelo próprio de passivos nem persistência dessa informação.",
+      "impact": "Patrimônio líquido e projeções podem ficar superestimados.",
+      "evidence": ["src/components/onboarding/steps/Step2Finances.tsx", "prisma/schema.prisma"]
+    },
+    {
+      "area": "Env consistency",
+      "finding": "Há divergência entre nomes de variáveis Stripe no exemplo de ambiente e no código do backend.",
+      "impact": "Ambiente pode parecer configurado, mas checkout/webhook continuarão sem mapear preços corretamente.",
+      "evidence": [".env.example", "src/server/routers/subscription.ts", "src/app/api/stripe/webhook/route.ts"]
+    }
+  ]
+}
